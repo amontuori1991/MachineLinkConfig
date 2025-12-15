@@ -1,0 +1,54 @@
+﻿@model MachineLinkConfig.Controllers.ImportPluginsVm
+@{
+    ViewData["Title"] = "Import";
+}
+
+<h2>Importa da testo</h2>
+<hr />
+
+<form method="post" action="/plugins/import">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label class="form-label">Incolla qui il testo TAB (come estratto da SQL)</label>
+        <textarea class="form-control" name="RawText" rows="14" style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">@Model.RawText</textarea>
+        <div class="text-muted mt-2">
+            Formato atteso: RECORD_ID[TAB]KEYCF[TAB]CFUSR[TAB]CFVAL ...
+        </div>
+    </div>
+
+    <div class="mb-3 form-check">
+        <input class="form-check-input" type="checkbox" name="EnableExportOnImported" value="true" @(Model.EnableExportOnImported ? "checked" : "") />
+        <label class="form-check-label">Imposta ExportEnabled = true sulle righe importate</label>
+        <input type="hidden" name="EnableExportOnImported" value="false" />
+    </div>
+
+    <button class="btn btn-dark" type="submit">Esegui import</button>
+    <a class="btn btn-secondary" href="/plugins">Indietro</a>
+</form>
+
+@if (Model.Result != null)
+{
+    <hr />
+    <h4>Risultato import</h4>
+
+    <div class="mb-2">
+        <strong>Plugins creati:</strong> @Model.Result.PluginsCreated<br />
+        <strong>Plugins aggiornati:</strong> @Model.Result.PluginsUpdated<br />
+        <strong>Macchine create:</strong> @Model.Result.MachinesCreated<br />
+        <strong>Templates creati:</strong> @Model.Result.TemplatesCreated<br />
+        <strong>Values creati:</strong> @Model.Result.ValuesCreated<br />
+        <strong>Values aggiornati:</strong> @Model.Result.ValuesUpdated<br />
+        <strong>Dispatcher templates creati:</strong> @Model.Result.DispatcherTemplatesCreated<br />
+        <strong>Dispatcher values creati:</strong> @Model.Result.DispatcherValuesCreated<br />
+        <strong>Dispatcher values aggiornati:</strong> @Model.Result.DispatcherValuesUpdated<br />
+        <strong>Righe ignorate:</strong> @Model.Result.SkippedLines
+    </div>
+
+    @if (Model.Result.Messages.Count > 0)
+    {
+        <div class="alert alert-secondary" style="white-space:pre-wrap;">
+            @string.Join("\n", Model.Result.Messages)
+        </div>
+    }
+}

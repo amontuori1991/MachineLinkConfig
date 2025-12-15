@@ -42,6 +42,456 @@ public class PluginsController : Controller
 
         return View(vm);
     }
+
+    // GET /plugins/import
+    [HttpGet("import")]
+    public IActionResult Import()
+    {
+        return View(new ImportPluginsVm
+        {
+            EnableExportOnImported = true
+        });
+    }
+
+    // POST /plugins/import
+    [HttpPost("import")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Import(ImportPluginsVm vm)
+    {
+        vm.RawText = vm.RawText ?? "";
+        var result = new ImportResultVm();
+
+        if (string.IsNullOrWhiteSpace(vm.RawText))
+        {
+            result.Messages.Add("Testo vuoto.");
+            vm.Result = result;
+            return View(vm);
+        }
+
+        // 1) parsing righe
+        var lines = vm.RawText
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.TrimEnd())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToList();
+
+        var parsedLines = new List<ParsedLine>();
+
+        foreach (var line in lines)
+        {
+            // Prova TAB
+            var parts = line.Split('\t');
+            if (parts.Length < 4)
+            {
+                // fallback: split su spazi multipli
+                parts = System.Text.RegularExpressions.Regex.Split(line, @"\s{2,}");
+            }
+
+            if (parts.Length < 4)
+            {
+                result.SkippedLines++;
+                continue;
+            }
+
+            // KEYCF è la seconda colonna, CFUSR terza, CFVAL quarta
+            var keycf = (parts[1] ?? "").Trim();
+            var cfusr = (parts[2] ?? "").Trim();
+            var cfval = (parts[3] ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(keycf))
+            {
+                result.SkippedLines++;
+                continue;
+            }
+
+            parsedLines.Add(new ParsedLine
+            {
+                KeyCf = keycf,
+                Cfusr = string.IsNullOrWhiteSpace(cfusr) ? null : cfusr,
+                Cfval = string.IsNullOrWhiteSpace(cfval) ? null : cfval
+            });
+        }
+
+        // 2) deduco il plugin name (1 plugin per import)
+        // Priorità: riga SURVEYS_SERVICE_PLUGIN_<NAME> / MACHINEREADER_SERVICE_PLUGIN_<NAME>
+        // Fallback: dalle righe standard <ROOT>_<NAME>_01_<SUFFIX>
+        var parsedKeys = parsedLines
+            .Select(x => TryParseKey(x.KeyCf))
+            .Where(x => x != null)
+            .Cast<ParsedKey>()
+            .ToList();
+
+        var pluginName = parsedKeys
+            .Where(k => k.Kind == ParsedKeyKind.PluginParam && k.IsPluginActivation)
+            .Select(k => k.PluginName)
+            .FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(pluginName))
+        {
+            pluginName = parsedKeys
+                .Where(k => k.Kind == ParsedKeyKind.PluginParam && !string.IsNullOrWhiteSpace(k.PluginName))
+                .Select(k => k.PluginName)
+                .FirstOrDefault();
+        }
+
+        if (string.IsNullOrWhiteSpace(pluginName))
+        {
+            result.Messages.Add("Impossibile dedurre il nome plugin dal testo (manca KEYCF riconoscibile).");
+            vm.Result = result;
+            return View(vm);
+        }
+
+        pluginName = pluginName.ToUpperInvariant();
+
+        // Deduzioni: servizi supportati, dispatcher
+        bool hasSurveys = parsedKeys.Any(x => x.ServiceRoot == "SURVEYS_SERVICE");
+        bool hasMachineReader = parsedKeys.Any(x => x.ServiceRoot == "MACHINEREADER_SERVICE");
+        bool hasDispatcher = parsedKeys.Any(x => x.Kind == ParsedKeyKind.Dispatcher);
+
+        // dispatcherCode (se c’è almeno una riga dispatcher)
+        var dispatcherCode = parsedKeys.FirstOrDefault(x => x.Kind == ParsedKeyKind.Dispatcher)?.DispatcherCode;
+
+        // 3) Plugin upsert
+        var plugin = await _db.Plugins.FirstOrDefaultAsync(p => p.Name == pluginName);
+        if (plugin == null)
+        {
+            plugin = new Plugin
+            {
+                Name = pluginName,
+                DisplayName = pluginName,
+                SupportsSurveys = hasSurveys,
+                SupportsMachineReader = hasMachineReader,
+                ManagesDispatcher = hasDispatcher,
+                DispatcherCode = hasDispatcher ? dispatcherCode?.ToUpperInvariant() : null
+            };
+            _db.Plugins.Add(plugin);
+            await _db.SaveChangesAsync();
+            result.PluginsCreated++;
+        }
+        else
+        {
+            bool changed = false;
+            if (hasSurveys && !plugin.SupportsSurveys) { plugin.SupportsSurveys = true; changed = true; }
+            if (hasMachineReader && !plugin.SupportsMachineReader) { plugin.SupportsMachineReader = true; changed = true; }
+            if (hasDispatcher && !plugin.ManagesDispatcher) { plugin.ManagesDispatcher = true; changed = true; }
+
+            if (hasDispatcher && !string.IsNullOrWhiteSpace(dispatcherCode) && string.IsNullOrWhiteSpace(plugin.DispatcherCode))
+            {
+                plugin.DispatcherCode = dispatcherCode!.ToUpperInvariant();
+                changed = true;
+            }
+
+            if (changed)
+            {
+                await _db.SaveChangesAsync();
+                result.PluginsUpdated++;
+            }
+        }
+
+        // 4) Macchine: crea quelle che compaiono nel file
+        var machineNos = parsedKeys
+            .Where(x => x.Kind == ParsedKeyKind.PluginParam && x.MachineNo.HasValue)
+            .Select(x => x.MachineNo!.Value)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        var machinesDb = await _db.PluginMachineConfigs.Where(m => m.PluginId == plugin.Id).ToListAsync();
+
+        foreach (var mn in machineNos)
+        {
+            if (!machinesDb.Any(m => m.MachineNo == mn))
+            {
+                var m = new PluginMachineConfig { PluginId = plugin.Id, MachineNo = mn, Enabled = true };
+                _db.PluginMachineConfigs.Add(m);
+                result.MachinesCreated++;
+            }
+        }
+
+        if (result.MachinesCreated > 0)
+            await _db.SaveChangesAsync();
+
+        machinesDb = await _db.PluginMachineConfigs.Where(m => m.PluginId == plugin.Id).ToListAsync();
+        var machineIdByNo = machinesDb.ToDictionary(x => x.MachineNo, x => x.Id);
+
+        // 5) Templates + Values (solo chiavi presenti nel file)
+        var templatesDb = await _db.PluginParameterTemplates.Where(t => t.PluginId == plugin.Id).ToListAsync();
+
+        var pluginLines = parsedLines
+            .Where(pl =>
+            {
+                var pk = TryParseKey(pl.KeyCf);
+                return pk != null && pk.PluginName.ToUpperInvariant() == pluginName;
+            })
+            .ToList();
+
+        foreach (var pl in pluginLines)
+        {
+            var pk = TryParseKey(pl.KeyCf);
+            if (pk == null) { result.SkippedLines++; continue; }
+
+            if (pk.Kind == ParsedKeyKind.PluginParam)
+            {
+                var scope = pk.IsPluginActivation ? "PLUGIN_GLOBAL" : (pk.MachineNo.HasValue ? "PER_MACHINE" : "PLUGIN_GLOBAL");
+                var keySuffix = pk.IsPluginActivation ? "PLUGIN" : pk.KeySuffix!.ToUpperInvariant();
+                var serviceRoot = pk.ServiceRoot;
+
+                // template upsert
+                var tpl = templatesDb.FirstOrDefault(t =>
+                    t.ServiceRoot == serviceRoot &&
+                    t.Scope == scope &&
+                    t.KeySuffix.ToUpper() == keySuffix);
+
+                if (tpl == null)
+                {
+                    tpl = new PluginParameterTemplate
+                    {
+                        PluginId = plugin.Id,
+                        ServiceRoot = serviceRoot,
+                        Scope = scope,
+                        ParamCode = keySuffix,
+                        KeySuffix = keySuffix,
+                        Description = pk.IsPluginActivation ? "Attivazione plugin" : "",
+                        DefaultCfusr = null,
+                        DefaultCfval = null,
+                        ExportEnabledDefault = true,
+                        SortOrder = 0
+                    };
+                    _db.PluginParameterTemplates.Add(tpl);
+                    await _db.SaveChangesAsync();
+                    templatesDb.Add(tpl);
+                    result.TemplatesCreated++;
+                }
+
+                long? machineConfigId = null;
+                if (scope == "PER_MACHINE" && pk.MachineNo.HasValue)
+                    machineConfigId = machineIdByNo[pk.MachineNo.Value];
+
+                // value upsert
+                var existingValue = await _db.PluginParameterValues.FirstOrDefaultAsync(v =>
+                    v.PluginId == plugin.Id &&
+                    v.TemplateId == tpl.Id &&
+                    v.MachineConfigId == machineConfigId);
+
+                if (existingValue == null)
+                {
+                    _db.PluginParameterValues.Add(new PluginParameterValue
+                    {
+                        PluginId = plugin.Id,
+                        TemplateId = tpl.Id,
+                        MachineConfigId = machineConfigId,
+                        Cfusr = pl.Cfusr,
+                        Cfval = pl.Cfval,
+                        ExportEnabled = vm.EnableExportOnImported,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                    result.ValuesCreated++;
+                }
+                else
+                {
+                    existingValue.Cfusr = pl.Cfusr;
+                    existingValue.Cfval = pl.Cfval;
+                    if (vm.EnableExportOnImported) existingValue.ExportEnabled = true;
+                    existingValue.UpdatedAt = DateTime.UtcNow;
+                    result.ValuesUpdated++;
+                }
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        // 6) Dispatcher import (se presente)
+        if (plugin.ManagesDispatcher)
+        {
+            // serve mappa machineCode (COB-1) -> machineId usando MAC
+            var macTpl = templatesDb.FirstOrDefault(t => t.Scope == "PER_MACHINE" && t.KeySuffix.ToUpper() == "MAC");
+            var machineIdByCode = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+            if (macTpl != null)
+            {
+                var macValues = await _db.PluginParameterValues
+                    .Where(v => v.PluginId == plugin.Id && v.TemplateId == macTpl.Id && v.MachineConfigId != null)
+                    .ToListAsync();
+
+                foreach (var mv in macValues)
+                {
+                    var code = (mv.Cfval ?? "").Trim();
+                    if (!string.IsNullOrWhiteSpace(code))
+                        machineIdByCode[code] = mv.MachineConfigId!.Value;
+                }
+            }
+
+            var dispTemplatesDb = await _db.DispatcherParameterTemplates.Where(t => t.PluginId == plugin.Id).ToListAsync();
+
+            foreach (var pl in pluginLines)
+            {
+                var pk = TryParseKey(pl.KeyCf);
+                if (pk == null) continue;
+                if (pk.Kind != ParsedKeyKind.Dispatcher) continue;
+
+                var machineCode = (pk.MachineCode ?? "").Trim();
+                if (!machineIdByCode.TryGetValue(machineCode, out var machineId))
+                {
+                    result.Messages.Add($"Dispatcher SKIP: macchina '{machineCode}' non agganciabile (manca valore MAC). Key: {pl.KeyCf}");
+                    result.SkippedLines++;
+                    continue;
+                }
+
+                var paramCode = pk.ParamCode!.ToUpperInvariant();
+
+                var dtpl = dispTemplatesDb.FirstOrDefault(t => t.ParamCode.ToUpper() == paramCode);
+                if (dtpl == null)
+                {
+                    dtpl = new DispatcherParameterTemplate
+                    {
+                        PluginId = plugin.Id,
+                        ParamCode = paramCode,
+                        Description = "",
+                        DefaultValue = null,
+                        SortOrder = 0
+                    };
+                    _db.DispatcherParameterTemplates.Add(dtpl);
+                    await _db.SaveChangesAsync();
+                    dispTemplatesDb.Add(dtpl);
+                    result.DispatcherTemplatesCreated++;
+                }
+
+                var dval = await _db.DispatcherParameterValues.FirstOrDefaultAsync(v =>
+                    v.PluginId == plugin.Id &&
+                    v.MachineConfigId == machineId &&
+                    v.TemplateId == dtpl.Id);
+
+                if (dval == null)
+                {
+                    _db.DispatcherParameterValues.Add(new DispatcherParameterValue
+                    {
+                        PluginId = plugin.Id,
+                        MachineConfigId = machineId,
+                        TemplateId = dtpl.Id,
+                        CompanyCode = string.IsNullOrWhiteSpace(pl.Cfusr) ? "A01" : pl.Cfusr.Trim(),
+                        Value = pl.Cfval,
+                        ExportEnabled = vm.EnableExportOnImported,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                    result.DispatcherValuesCreated++;
+                }
+                else
+                {
+                    dval.CompanyCode = string.IsNullOrWhiteSpace(pl.Cfusr) ? "A01" : pl.Cfusr.Trim();
+                    dval.Value = pl.Cfval;
+                    if (vm.EnableExportOnImported) dval.ExportEnabled = true;
+                    dval.UpdatedAt = DateTime.UtcNow;
+                    result.DispatcherValuesUpdated++;
+                }
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
+        result.Messages.Add($"Import completato per plugin {pluginName}.");
+        vm.Result = result;
+        return View(vm);
+    }
+
+    /* =======================
+       IMPORT: helper + classi
+       ======================= */
+
+    private class ParsedLine
+    {
+        public string KeyCf { get; set; } = "";
+        public string? Cfusr { get; set; }
+        public string? Cfval { get; set; }
+    }
+
+    private enum ParsedKeyKind
+    {
+        PluginParam,
+        Dispatcher
+    }
+
+    private class ParsedKey
+    {
+        public ParsedKeyKind Kind { get; set; }
+        public string ServiceRoot { get; set; } = "";
+        public string PluginName { get; set; } = "";
+
+        public bool IsPluginActivation { get; set; } = false;
+
+        public int? MachineNo { get; set; }          // 01 -> 1
+        public string? KeySuffix { get; set; }       // MAC, DIP, ...
+
+        // Dispatcher
+        public string? DispatcherCode { get; set; }  // CAI
+        public string? MachineCode { get; set; }     // COB-1
+        public string? ParamCode { get; set; }       // ENDPOINT, USERNAME...
+    }
+
+    private static ParsedKey? TryParseKey(string keycf)
+    {
+        if (string.IsNullOrWhiteSpace(keycf)) return null;
+
+        keycf = keycf.Trim();
+
+        // DISPATCHER: SURVEYS_SERVICE_DISPATCHER_<CODE>_<MACHINECODE>_<PARAM>
+        var mDisp = System.Text.RegularExpressions.Regex.Match(
+            keycf,
+            @"^(SURVEYS_SERVICE|MACHINEREADER_SERVICE)_DISPATCHER_([A-Z0-9]+)_([^_]+)_([A-Z0-9_]+)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (mDisp.Success)
+        {
+            return new ParsedKey
+            {
+                Kind = ParsedKeyKind.Dispatcher,
+                ServiceRoot = mDisp.Groups[1].Value.ToUpperInvariant(),
+                PluginName = "", // lo riempiamo dopo (per noi basta riconoscerla)
+                DispatcherCode = mDisp.Groups[2].Value.ToUpperInvariant(),
+                MachineCode = mDisp.Groups[3].Value,
+                ParamCode = mDisp.Groups[4].Value.ToUpperInvariant()
+            };
+        }
+
+        // PLUGIN activation: SURVEYS_SERVICE_PLUGIN_<PLUGIN>
+        var mAct = System.Text.RegularExpressions.Regex.Match(
+            keycf,
+            @"^(SURVEYS_SERVICE|MACHINEREADER_SERVICE)_PLUGIN_([A-Z0-9]+)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (mAct.Success)
+        {
+            return new ParsedKey
+            {
+                Kind = ParsedKeyKind.PluginParam,
+                ServiceRoot = mAct.Groups[1].Value.ToUpperInvariant(),
+                PluginName = mAct.Groups[2].Value.ToUpperInvariant(),
+                IsPluginActivation = true,
+                MachineNo = null,
+                KeySuffix = "PLUGIN"
+            };
+        }
+
+        // Standard per macchina: <ROOT>_<PLUGIN>_01_<SUFFIX>
+        var mStd = System.Text.RegularExpressions.Regex.Match(
+            keycf,
+            @"^(SURVEYS_SERVICE|MACHINEREADER_SERVICE)_([A-Z0-9]+)_([0-9]{2})_([A-Z0-9_]+)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (mStd.Success)
+        {
+            return new ParsedKey
+            {
+                Kind = ParsedKeyKind.PluginParam,
+                ServiceRoot = mStd.Groups[1].Value.ToUpperInvariant(),
+                PluginName = mStd.Groups[2].Value.ToUpperInvariant(),
+                MachineNo = int.Parse(mStd.Groups[3].Value),
+                KeySuffix = mStd.Groups[4].Value.ToUpperInvariant()
+            };
+        }
+
+        return null;
+    }
+
     // GET /plugins/{id}/templates
     [HttpGet("{id:long}/templates")]
     public async Task<IActionResult> Templates(long id)
@@ -1644,3 +2094,28 @@ public class EditTemplateVm
     public bool ExportEnabledDefault { get; set; } = true;
     public int SortOrder { get; set; } = 0;
 }
+public class ImportPluginsVm
+{
+    public string RawText { get; set; } = "";
+    public bool EnableExportOnImported { get; set; } = true;
+    public ImportResultVm? Result { get; set; }
+}
+
+public class ImportResultVm
+{
+    public int PluginsCreated { get; set; }
+    public int PluginsUpdated { get; set; }
+    public int MachinesCreated { get; set; }
+
+    public int TemplatesCreated { get; set; }
+    public int ValuesCreated { get; set; }
+    public int ValuesUpdated { get; set; }
+
+    public int DispatcherTemplatesCreated { get; set; }
+    public int DispatcherValuesCreated { get; set; }
+    public int DispatcherValuesUpdated { get; set; }
+
+    public int SkippedLines { get; set; }
+    public List<string> Messages { get; set; } = new();
+}
+
