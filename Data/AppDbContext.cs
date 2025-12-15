@@ -17,12 +17,22 @@ public class AppDbContext : DbContext
     public DbSet<DispatcherParameterValue> DispatcherParameterValues => Set<DispatcherParameterValue>();
     public DbSet<PluginScenario> PluginScenarios => Set<PluginScenario>();
     public DbSet<PluginScenarioFlag> PluginScenarioFlags => Set<PluginScenarioFlag>();
+    public DbSet<MachineLinkConfig.Models.GlobalRule> GlobalRules => Set<MachineLinkConfig.Models.GlobalRule>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<MachineLinkConfig.Models.GlobalRule>(e =>
+        {
+            e.ToTable("GlobalRules");
+            e.Property(x => x.RuleType).IsRequired();
+            e.Property(x => x.IfParamKeySuffix).IsRequired();
+            e.Property(x => x.ThenParamKeySuffix).IsRequired();
+            e.Property(x => x.Description).IsRequired();
+        });
 
         // Non aggiungo relazioni complesse ora: mapping semplice e robusto.
         // Le FK sono già in DB: EF le userà quando faremo query join.
     }
+
 }

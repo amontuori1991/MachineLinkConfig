@@ -679,9 +679,16 @@ public class PluginsController : Controller
 
                 var activeFlagSet = new HashSet<string>(activeFlags);
 
-                var rules = await _db.PluginRules
+                var pluginRules = await _db.PluginRules
                     .Where(r => r.PluginId == id)
                     .ToListAsync();
+
+                var globalRules = await _db.GlobalRules.ToListAsync();
+
+                var rules = pluginRules
+                    .Select(r => new { r.RuleType, r.IfParamKeySuffix, r.ThenParamKeySuffix, r.ForcedValue, r.Description })
+                    .Concat(globalRules.Select(r => new { r.RuleType, r.IfParamKeySuffix, r.ThenParamKeySuffix, r.ForcedValue, r.Description }))
+                    .ToList();
 
                 // Mappa template per KeySuffix
                 var templatesBySuffix = templates
@@ -1530,18 +1537,89 @@ public class PluginsController : Controller
 
 
 
-        _db.PluginRules.Add(new PluginRule
+        // 1) Crea la regola per il plugin corrente SOLO se non esiste già
+        var existsForThisPlugin = await _db.PluginRules.AnyAsync(r =>
+            r.PluginId == id &&
+            r.RuleType.ToUpper() == vm.RuleType.ToUpper() &&
+            r.IfParamKeySuffix.ToUpper() == vm.IfParamKeySuffix.ToUpper() &&
+            r.ThenParamKeySuffix.ToUpper() == vm.ThenParamKeySuffix.ToUpper() &&
+            (r.ForcedValue ?? "") == (vm.ForcedValue ?? "")
+        );
+
+        if (!existsForThisPlugin)
         {
-            PluginId = id,
-            RuleType = vm.RuleType,
-            IfParamKeySuffix = vm.IfParamKeySuffix,
-            ThenParamKeySuffix = vm.ThenParamKeySuffix,
-            ForcedValue = vm.ForcedValue,
-            Description = vm.Description
-        });
+            _db.PluginRules.Add(new PluginRule
+            {
+                PluginId = id,
+                RuleType = vm.RuleType,
+                IfParamKeySuffix = vm.IfParamKeySuffix,
+                ThenParamKeySuffix = vm.ThenParamKeySuffix,
+                ForcedValue = vm.ForcedValue,
+                Description = vm.Description ?? ""
+            });
+        }
+
+        // 2) Se richiesto: crea anche la regola globale + duplica su tutti i plugin esistenti
+        if (vm.AlsoCreateGlobalRule)
+        {
+            // 2a) Inserisce in GlobalRules (una sola volta, no duplicati)
+            var existsGlobal = await _db.GlobalRules.AnyAsync(g =>
+                g.RuleType.ToUpper() == vm.RuleType.ToUpper() &&
+                g.IfParamKeySuffix.ToUpper() == vm.IfParamKeySuffix.ToUpper() &&
+                g.ThenParamKeySuffix.ToUpper() == vm.ThenParamKeySuffix.ToUpper() &&
+                (g.ForcedValue ?? "") == (vm.ForcedValue ?? "")
+            );
+
+            if (!existsGlobal)
+            {
+                _db.GlobalRules.Add(new GlobalRule
+                {
+                    RuleType = vm.RuleType,
+                    IfParamKeySuffix = vm.IfParamKeySuffix,
+                    ThenParamKeySuffix = vm.ThenParamKeySuffix,
+                    ForcedValue = vm.ForcedValue,
+                    Description = vm.Description ?? ""
+                });
+            }
+
+            // 2b) Duplica su PluginRules per TUTTI i plugin esistenti (skip duplicati)
+            var allPluginIds = await _db.Plugins
+                .Select(p => p.Id)
+                .ToListAsync();
+
+            // quali plugin hanno già questa regola?
+            var alreadyHasRule = await _db.PluginRules
+                .Where(r =>
+                    r.RuleType.ToUpper() == vm.RuleType.ToUpper() &&
+                    r.IfParamKeySuffix.ToUpper() == vm.IfParamKeySuffix.ToUpper() &&
+                    r.ThenParamKeySuffix.ToUpper() == vm.ThenParamKeySuffix.ToUpper() &&
+                    (r.ForcedValue ?? "") == (vm.ForcedValue ?? "")
+                )
+                .Select(r => r.PluginId)
+                .ToListAsync();
+
+            var alreadySet = new HashSet<long>(alreadyHasRule);
+
+            foreach (var pid in allPluginIds)
+            {
+                if (alreadySet.Contains(pid))
+                    continue;
+
+                _db.PluginRules.Add(new PluginRule
+                {
+                    PluginId = pid,
+                    RuleType = vm.RuleType,
+                    IfParamKeySuffix = vm.IfParamKeySuffix,
+                    ThenParamKeySuffix = vm.ThenParamKeySuffix,
+                    ForcedValue = vm.ForcedValue,
+                    Description = vm.Description ?? ""
+                });
+            }
+        }
 
         await _db.SaveChangesAsync();
         return Redirect($"/plugins/{id}/rules");
+
     }
     // GET /plugins/{id}/scenarios
     [HttpGet("{id:long}/scenarios")]
@@ -2064,6 +2142,7 @@ public class CreateRuleVm
     public string ThenParamKeySuffix { get; set; } = "";
     public string? ForcedValue { get; set; }
     public string? Description { get; set; }
+    public bool AlsoCreateGlobalRule { get; set; } = false;
 }
 public class PluginScenariosVm
 {
