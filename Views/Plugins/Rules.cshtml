@@ -31,13 +31,27 @@
 
         <div class="col-md-3">
             <label class="form-label">IF (KeySuffix)</label>
-            <input class="form-control" name="IfParamKeySuffix" placeholder="Es. TEMPO_UOMO oppure DIP" />
+            <select class="form-select" name="IfParamKeySuffix">
+                <option value="">-- seleziona --</option>
+                @foreach (var s in Model.AvailableKeySuffixes)
+                {
+                    <option value="@s">@s</option>
+                }
+            </select>
         </div>
+
 
         <div class="col-md-3">
             <label class="form-label">THEN (KeySuffix)</label>
-            <input class="form-control" name="ThenParamKeySuffix" placeholder="Es. DIP" />
+            <select class="form-select" name="ThenParamKeySuffix">
+                <option value="">-- seleziona --</option>
+                @foreach (var s in Model.AvailableKeySuffixes)
+                {
+                    <option value="@s">@s</option>
+                }
+            </select>
         </div>
+
 
         <div class="col-md-3" id="forcedBlock" style="display:none;">
             <label class="form-label">Forced Value</label>

@@ -1456,13 +1456,20 @@ public class PluginsController : Controller
             .ThenBy(r => r.IfParamKeySuffix)
             .ThenBy(r => r.ThenParamKeySuffix)
             .ToListAsync();
+        var keySuffixes = await _db.PluginParameterTemplates
+    .Where(t => t.PluginId == id)
+    .Select(t => t.KeySuffix)
+    .Distinct()
+    .OrderBy(x => x)
+    .ToListAsync();
 
         return View(new PluginRulesVm
         {
             PluginId = id,
             PluginName = plugin.Name,
             Rules = rules,
-            NewRule = new CreateRuleVm()
+            NewRule = new CreateRuleVm(),
+            AvailableKeySuffixes = keySuffixes
         });
     }
 
@@ -1504,14 +1511,23 @@ public class PluginsController : Controller
                 .ThenBy(r => r.ThenParamKeySuffix)
                 .ToListAsync();
 
+            var keySuffixes = await _db.PluginParameterTemplates
+                .Where(t => t.PluginId == id)
+                .Select(t => t.KeySuffix)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
+
             return View("Rules", new PluginRulesVm
             {
                 PluginId = id,
                 PluginName = plugin.Name,
                 Rules = rules,
-                NewRule = vm
+                NewRule = vm,
+                AvailableKeySuffixes = keySuffixes
             });
         }
+
 
 
         _db.PluginRules.Add(new PluginRule
@@ -2037,6 +2053,8 @@ public class PluginRulesVm
     public string PluginName { get; set; } = "";
     public List<MachineLinkConfig.Models.PluginRule> Rules { get; set; } = new();
     public CreateRuleVm NewRule { get; set; } = new();
+
+    public List<string> AvailableKeySuffixes { get; set; } = new();
 }
 
 public class CreateRuleVm
