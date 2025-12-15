@@ -1,0 +1,106 @@
+﻿@model MachineLinkConfig.Controllers.PluginTemplatesVm
+
+@{
+    ViewData["Title"] = "Template Parametri";
+}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+        <h2 style="margin:0;">Template Parametri</h2>
+        <div class="text-muted">
+            Plugin: <b>@Model.Plugin.DisplayName</b> (<code>@Model.Plugin.Name</code>)
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <a class="btn btn-secondary" href="/plugins/@Model.Plugin.Id">← Dettaglio</a>
+        <a class="btn btn-primary" href="/plugins/@Model.Plugin.Id/templates/create">+ Aggiungi Parametro</a>
+    </div>
+</div>
+
+<hr />
+
+@if (!Model.Templates.Any())
+{
+    <p>Nessun template parametro. Clicca “Aggiungi Parametro”.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Ord</th>
+                <th>Service</th>
+                <th>Scope</th>
+                <th>KeySuffix</th>
+                <th>ParamCode</th>
+                <th>Descrizione</th>
+                <th>Default CFUSR</th>
+                <th>Default CFVAL</th>
+                <th>Export default</th>
+                <th style="width:140px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in Model.Templates)
+            {
+                <tr>
+                    <td>@t.SortOrder</td>
+                    <td><code>@t.ServiceRoot</code></td>
+                    <td>@t.Scope</td>
+                    <td><code>@t.KeySuffix</code></td>
+                    <td><code>@t.ParamCode</code></td>
+                    <td>
+    @if (!string.IsNullOrWhiteSpace(t.Description))
+    {
+        <span style="display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">
+            @t.Description
+        </span>
+
+        <span title="@t.Description"
+              style="cursor:help; margin-left:6px; color:#6c757d; vertical-align:middle;">
+            &#9432;
+        </span>
+    }
+    else
+    {
+        <span class="text-muted">-</span>
+    }
+</td>
+
+                    <td>@(t.DefaultCfusr ?? "-")</td>
+                    <td>@(t.DefaultCfval ?? "-")</td>
+                    <td>@(t.ExportEnabledDefault ? "SI" : "NO")</td>
+                    <td style="text-align:right; white-space:nowrap;">
+                        <a class="btn btn-outline-primary btn-sm"
+                           href="/plugins/@Model.Plugin.Id/templates/@t.Id/edit">
+                            Modifica
+                        </a>
+
+                        <form method="post"
+                              action="/plugins/@Model.Plugin.Id/templates/@t.Id/apply-defaults"
+                              style="display:inline; margin-left:6px;">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-outline-success btn-sm" type="submit"
+                                    onclick="return confirm('Applicare i default del template ai valori esistenti (solo dove vuoti)?');">
+                                Applica default
+                            </button>
+                        </form>
+
+                        <form method="post"
+                              action="/plugins/@Model.Plugin.Id/templates/@t.Id/delete"
+                              style="display:inline; margin-left:6px;">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-outline-danger btn-sm" type="submit"
+                                    onclick="return confirm('Eliminare il template @t.KeySuffix ? (Cancella anche i valori collegati)');">
+                                Elimina
+                            </button>
+                        </form>
+                    </td>
+
+
+                </tr>
+            }
+        </tbody>
+    </table>
+}

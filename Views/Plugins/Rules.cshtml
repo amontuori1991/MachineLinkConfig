@@ -1,0 +1,118 @@
+﻿@model MachineLinkConfig.Controllers.PluginRulesVm
+
+@{
+    ViewData["Title"] = "Regole";
+}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+        <h2 style="margin:0;">Regole</h2>
+        <div class="text-muted">Plugin: <code>@Model.PluginName</code></div>
+    </div>
+    <a class="btn btn-secondary" href="/plugins/@Model.PluginId">← Dettaglio</a>
+</div>
+
+<hr />
+
+<h4>Aggiungi regola</h4>
+
+<form method="post" action="/plugins/@Model.PluginId/rules/create" style="max-width:900px;">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-2">
+        <div class="col-md-3">
+            <label class="form-label">RuleType</label>
+            <select class="form-select" name="RuleType" id="ruleType">
+                <option value="MUTEX">MUTEX</option>
+                <option value="REQUIRE">REQUIRE</option>
+                <option value="FORCE_VALUE">FORCE_VALUE</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">IF (KeySuffix)</label>
+            <input class="form-control" name="IfParamKeySuffix" placeholder="Es. TEMPO_UOMO oppure DIP" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">THEN (KeySuffix)</label>
+            <input class="form-control" name="ThenParamKeySuffix" placeholder="Es. DIP" />
+        </div>
+
+        <div class="col-md-3" id="forcedBlock" style="display:none;">
+            <label class="form-label">Forced Value</label>
+            <input class="form-control" name="ForcedValue" placeholder="Es. 00000" />
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Descrizione (opzionale)</label>
+            <input class="form-control" name="Description" placeholder="Es. Se tempo uomo attivo, DIP=00000" />
+        </div>
+    </div>
+
+    <div class="text-danger" style="margin-top:8px;">
+        @Html.ValidationSummary()
+    </div>
+
+    <button class="btn btn-danger" type="submit" style="margin-top:10px;">Salva regola</button>
+</form>
+
+<hr />
+
+<h4>Regole esistenti</h4>
+
+@if (!Model.Rules.Any())
+{
+    <p>Nessuna regola definita.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>IF</th>
+                <th>THEN</th>
+                <th>Forced</th>
+                <th>Descrizione</th>
+                <th style="width:120px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model.Rules)
+            {
+                <tr>
+                    <td><code>@r.RuleType</code></td>
+                    <td><code>@r.IfParamKeySuffix</code></td>
+                    <td><code>@r.ThenParamKeySuffix</code></td>
+                    <td>@(r.ForcedValue ?? "-")</td>
+                    <td>@r.Description</td>
+
+                    <td style="text-align:right;">
+                        <a class="btn btn-outline-primary btn-sm" href="/plugins/@Model.PluginId/rules/@r.Id/edit">Modifica</a>
+
+                        <form method="post" action="/plugins/@Model.PluginId/rules/@r.Id/delete" style="display:inline; margin-left:8px;">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-outline-danger btn-sm" type="submit"
+                                    onclick="return confirm('Eliminare questa regola?');">
+                                Elimina
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<script>
+    const ruleType = document.getElementById('ruleType');
+    const forced = document.getElementById('forcedBlock');
+
+    function refresh() {
+        forced.style.display = (ruleType.value === 'FORCE_VALUE') ? 'block' : 'none';
+    }
+
+    ruleType.addEventListener('change', refresh);
+    refresh();
+</script>

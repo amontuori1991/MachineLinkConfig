@@ -1,0 +1,59 @@
+﻿@model MachineLinkConfig.Controllers.ExportVm
+
+@{
+    ViewData["Title"] = "Export";
+}
+
+<h2>Export</h2>
+<hr />
+
+<form method="post" action="/plugins/@Model.PluginId/export/download">
+    @Html.AntiForgeryToken()
+
+    @if (Model.Scenarios != null && Model.Scenarios.Any())
+    {
+        <div class="mb-3">
+            <label class="form-label">Scenario</label>
+            <select class="form-select" name="ScenarioId">
+                @foreach (var s in Model.Scenarios)
+                {
+                    if (Model.ScenarioId == s.Id)
+                    {
+                        <option value="@s.Id" selected="selected">@s.Name</option>
+                    }
+                    else
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
+                }
+            </select>
+            <div class="text-muted" style="margin-top:6px;">
+                Lo scenario applica regole (FORCE_VALUE / MUTEX) in base ai flag attivi.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted mb-3">
+            Nessuno scenario creato. Vai in “Scenari” dal dettaglio plugin.
+        </div>
+    }
+
+    <div class="mb-3 form-check">
+        <input class="form-check-input" type="checkbox" name="IncludeHeader" value="true" @(Model.IncludeHeader ? "checked" : "") />
+        <label class="form-check-label">Includi intestazione (header)</label>
+        <input type="hidden" name="IncludeHeader" value="false" />
+    </div>
+
+    <div class="mb-3 form-check">
+        <input class="form-check-input" type="checkbox" name="IncludeDispatcher" value="true" @(Model.IncludeDispatcher ? "checked" : "") />
+        <label class="form-check-label">Includi parametri Dispatcher (se disponibili)</label>
+        <input type="hidden" name="IncludeDispatcher" value="false" />
+        <div class="text-muted" style="margin-top:6px;">
+            Nota: il Dispatcher richiede che esista il parametro <code>MAC</code> per ogni macchina.
+        </div>
+    </div>
+
+    <button class="btn btn-dark" type="submit">Scarica export (.txt con ;)</button>
+    <a class="btn btn-secondary" href="/plugins/@Model.PluginId">Indietro</a>
+</form>

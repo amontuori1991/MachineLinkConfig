@@ -1,0 +1,104 @@
+﻿@model MachineLinkConfig.Controllers.CreateTemplateVm
+
+@{
+    ViewData["Title"] = "Aggiungi Template Parametro";
+}
+
+<h2>Aggiungi Template Parametro</h2>
+<hr />
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label class="form-label">Service Root</label>
+        <select class="form-select" name="ServiceRoot">
+            @if (Model.SupportsSurveys)
+            {
+                if (Model.ServiceRoot == "SURVEYS_SERVICE")
+                {
+                    <option value="SURVEYS_SERVICE" selected="selected">SURVEYS_SERVICE</option>
+                }
+                else
+                {
+                    <option value="SURVEYS_SERVICE">SURVEYS_SERVICE</option>
+                }
+            }
+
+            @if (Model.SupportsMachineReader)
+            {
+                if (Model.ServiceRoot == "MACHINEREADER_SERVICE")
+                {
+                    <option value="MACHINEREADER_SERVICE" selected="selected">MACHINEREADER_SERVICE</option>
+                }
+                else
+                {
+                    <option value="MACHINEREADER_SERVICE">MACHINEREADER_SERVICE</option>
+                }
+            }
+        </select>
+
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Scope</label>
+        <select class="form-select" name="Scope">
+            @if (Model.Scope == "PER_MACHINE")
+            {
+                <option value="PER_MACHINE" selected="selected">PER_MACHINE (con 01/02/03)</option>
+                <option value="PLUGIN_GLOBAL">PLUGIN_GLOBAL (una sola volta)</option>
+            }
+            else
+            {
+                <option value="PER_MACHINE">PER_MACHINE (con 01/02/03)</option>
+                <option value="PLUGIN_GLOBAL" selected="selected">PLUGIN_GLOBAL (una sola volta)</option>
+            }
+        </select>
+
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">KeySuffix (parte finale della KEYCF)</label>
+        <input class="form-control" name="KeySuffix" value="@Model.KeySuffix" placeholder="MAC / MODE / PATH_SRC / PLUGIN_TRUBENDRCI ecc." />
+        <small class="text-muted">Esempio: MAC → genera ..._01_MAC</small>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">ParamCode (codice interno)</label>
+        <input class="form-control" name="ParamCode" value="@Model.ParamCode" placeholder="MAC" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Descrizione (mostrata accanto al parametro)</label>
+        <input class="form-control" name="Description" value="@Model.Description" placeholder="Es. Codice macchina (TRB6)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Default CFUSR (opzionale)</label>
+        <input class="form-control" name="DefaultCfusr" value="@Model.DefaultCfusr" placeholder="Es. A01 (se ti serve)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Default CFVAL (opzionale)</label>
+        <input class="form-control" name="DefaultCfval" value="@Model.DefaultCfval" placeholder="Valore di default" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Sort Order</label>
+        <input class="form-control" type="number" name="SortOrder" value="@Model.SortOrder" />
+    </div>
+
+    <div class="mb-3 form-check">
+        <input class="form-check-input" type="checkbox" name="ExportEnabledDefault" value="true" @(Model.ExportEnabledDefault ? "checked" : "") />
+        <label class="form-check-label">Export abilitato di default</label>
+    </div>
+
+    <div class="text-danger">
+        @Html.ValidationSummary()
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" type="submit">Salva</button>
+        <a class="btn btn-secondary" href="/plugins/@Model.PluginId/templates">Annulla</a>
+    </div>
+</form>

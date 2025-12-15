@@ -1,0 +1,52 @@
+﻿@model MachineLinkConfig.Controllers.CreateDispatcherTemplateVm
+
+@{
+    ViewData["Title"] = "Crea Template Dispatcher";
+}
+
+<h2>Crea Template Dispatcher</h2>
+<hr />
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label class="form-label">ParamCode (IP / PORT / PROGRAM_ADDRESS)</label>
+        <input class="form-control" name="ParamCode" value="@Model.ParamCode" placeholder="IP" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Descrizione</label>
+        <input class="form-control" name="Description" value="@Model.Description" placeholder="Es. IP macchina" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Default Value (opzionale)</label>
+        <input class="form-control" name="DefaultValue" value="@Model.DefaultValue" placeholder="Es. 192.168.0.109" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Default Company Code (CFUSR)</label>
+        <input class="form-control" name="DefaultCompanyCode" value="@Model.DefaultCompanyCode" placeholder="A01" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Sort Order</label>
+        <input class="form-control" type="number" name="SortOrder" value="@Model.SortOrder" />
+    </div>
+
+    <div class="mb-3 form-check">
+        <input class="form-check-input" type="checkbox" name="ExportEnabledDefault" value="true" @(Model.ExportEnabledDefault ? "checked" : "") />
+        <label class="form-check-label">Export abilitato di default</label>
+        <input type="hidden" name="ExportEnabledDefault" value="false" />
+    </div>
+
+    <div class="text-danger">
+        @Html.ValidationSummary()
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button class="btn btn-warning" type="submit">Salva</button>
+        <a class="btn btn-secondary" href="/plugins/@Model.PluginId/dispatcher">Annulla</a>
+    </div>
+</form>

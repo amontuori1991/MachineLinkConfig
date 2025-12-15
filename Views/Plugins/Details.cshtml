@@ -1,0 +1,86 @@
+﻿@model MachineLinkConfig.Controllers.PluginDetailsVm
+
+@{
+    ViewData["Title"] = "Dettaglio Plugin";
+    string TwoDigits(int n) => n.ToString("D2");
+}
+
+<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+    <div>
+        <h2 style="margin-bottom:4px;">@Model.Plugin.DisplayName</h2>
+        <div class="text-muted">
+            <div><b>Name:</b> <code>@Model.Plugin.Name</code></div>
+            <div><b>SURVEYS:</b> @(Model.Plugin.SupportsSurveys ? "SI" : "NO")</div>
+            <div><b>MACHINEREADER:</b> @(Model.Plugin.SupportsMachineReader ? "SI" : "NO")</div>
+            <div><b>Dispatcher:</b> @(Model.Plugin.ManagesDispatcher ? "SI" : "NO")</div>
+            <div><b>Dispatcher Code:</b> @(Model.Plugin.DispatcherCode ?? "-")</div>
+        </div>
+    </div>
+
+    <div>
+        <a class="btn btn-secondary" href="/plugins">← Torna ai Plugins</a>
+    </div>
+</div>
+
+<hr />
+
+<div style="display:flex; gap:10px; margin-bottom:10px;">
+    <a class="btn btn-outline-primary" href="/plugins/@Model.Plugin.Id/templates">⚙️ Parametri (Template)</a>
+    <a class="btn btn-outline-success" href="/plugins/@Model.Plugin.Id/values">🧾 Valori Parametri</a>
+    <a class="btn btn-outline-dark" href="/plugins/@Model.Plugin.Id/export">⬇️ Export</a>
+    <a class="btn btn-outline-danger" href="/plugins/@Model.Plugin.Id/rules">🧩 Regole</a>
+    <a class="btn btn-outline-info" href="/plugins/@Model.Plugin.Id/scenarios">🎛️ Scenari</a>
+</div>
+@if (Model.Plugin.ManagesDispatcher)
+{
+    <a class="btn btn-outline-warning" href="/plugins/@Model.Plugin.Id/dispatcher">🚚 Dispatcher</a>
+}
+
+
+<div style="display:flex; align-items:center; justify-content:space-between;">
+    <h4 style="margin:0;">Macchine / Configurazioni</h4>
+
+    <form method="post" action="/plugins/@Model.Plugin.Id/machines/add" style="margin:0;">
+        @Html.AntiForgeryToken()
+        <button class="btn btn-primary" type="submit">+ Aggiungi configurazione</button>
+    </form>
+</div>
+
+<br />
+
+@if (!Model.Machines.Any())
+{
+    <p>Nessuna configurazione ancora. Premi “Aggiungi configurazione”.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Codice</th>
+                <th>Abilitata</th>
+                <th style="width:180px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in Model.Machines)
+            {
+                <tr>
+                    <td>@m.MachineNo</td>
+                    <td><code>@TwoDigits(m.MachineNo)</code></td>
+                    <td>@(m.Enabled ? "SI" : "NO")</td>
+                    <td style="text-align:right;">
+                        <form method="post" action="/plugins/@Model.Plugin.Id/machines/@m.Id/delete" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-outline-danger btn-sm" type="submit"
+                                    onclick="return confirm('Eliminare la configurazione @TwoDigits(m.MachineNo)?');">
+                                Elimina
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

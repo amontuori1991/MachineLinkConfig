@@ -1,0 +1,65 @@
+﻿@model MachineLinkConfig.Controllers.PluginScenariosVm
+
+@{
+    ViewData["Title"] = "Scenari";
+}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+        <h2 style="margin:0;">Scenari</h2>
+        <div class="text-muted">Plugin: <code>@Model.PluginName</code></div>
+    </div>
+    <a class="btn btn-secondary" href="/plugins/@Model.PluginId">← Dettaglio</a>
+</div>
+
+<hr />
+
+<form method="post" action="/plugins/@Model.PluginId/scenarios/create" style="display:flex; gap:10px; max-width:600px;">
+    @Html.AntiForgeryToken()
+    <input class="form-control" name="name" placeholder="Nome scenario (es. Default, Cliente X)" />
+    <button class="btn btn-primary" type="submit">Crea</button>
+</form>
+
+<br />
+
+@if (!Model.Scenarios.Any())
+{
+    <p>Nessuno scenario creato.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th style="width:160px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in Model.Scenarios)
+            {
+                <tr>
+                    <td style="text-align:right;">
+                        <a class="btn btn-outline-primary btn-sm" href="/plugins/@Model.PluginId/scenarios/@s.Id">Apri</a>
+
+                        <form method="post" action="/plugins/@Model.PluginId/scenarios/@s.Id/rename"
+                              style="display:inline-flex; gap:6px; margin-left:8px; align-items:center;">
+                            @Html.AntiForgeryToken()
+                            <input class="form-control form-control-sm" name="name" value="@s.Name" style="width:180px;" />
+                            <button class="btn btn-outline-secondary btn-sm" type="submit">Rinomina</button>
+                        </form>
+
+                        <form method="post" action="/plugins/@Model.PluginId/scenarios/@s.Id/delete" style="display:inline; margin-left:8px;">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-outline-danger btn-sm" type="submit"
+                                    onclick="return confirm('Eliminare lo scenario e tutti i suoi flag?');">
+                                Elimina
+                            </button>
+                        </form>
+                    </td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+}

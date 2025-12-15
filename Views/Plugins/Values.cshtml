@@ -1,0 +1,120 @@
+﻿@model MachineLinkConfig.Controllers.PluginValuesVm
+
+@{
+    ViewData["Title"] = "Valori Parametri";
+    int i = 0; // indice per binding lista
+}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+        <h2 style="margin:0;">Valori Parametri</h2>
+        <div class="text-muted">
+            Plugin: <b>@Model.Plugin.DisplayName</b> (<code>@Model.Plugin.Name</code>)
+        </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn btn-secondary" href="/plugins/@Model.Plugin.Id">← Dettaglio</a>
+        <a class="btn btn-outline-primary" href="/plugins/@Model.Plugin.Id/templates">Template</a>
+    </div>
+</div>
+
+<hr />
+
+<form method="post" action="/plugins/@Model.Plugin.Id/values/save">
+    @Html.AntiForgeryToken()
+
+    @if (Model.GlobalRows.Any())
+    {
+        <h4>Parametri Globali</h4>
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>KEYCF</th>
+                    <th>Descrizione</th>
+                    <th>CFUSR</th>
+                    <th>CFVAL</th>
+                    <th>Export</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.GlobalRows)
+                {
+                    <tr>
+                        <td><code>@r.KeyCf</code></td>
+                        <td>@r.Description</td>
+                        <td style="width:140px;">
+                            <input class="form-control form-control-sm" name="Items[@i].Cfusr" value="@r.Cfusr" />
+                        </td>
+                        <td>
+                            <input class="form-control form-control-sm" name="Items[@i].Cfval" value="@r.Cfval" />
+                        </td>
+                        <td style="width:90px; text-align:center;">
+                            <input type="checkbox" name="Items[@i].ExportEnabled" value="true" @(r.ExportEnabled ? "checked" : "") />
+                            <input type="hidden" name="Items[@i].ExportEnabled" value="false" />
+                        </td>
+
+                        <input type="hidden" name="Items[@i].ValueId" value="@r.ValueId" />
+
+                    </tr>
+                    i++;
+                }
+            </tbody>
+        </table>
+        <br />
+    }
+
+    <h4>Parametri per Macchina</h4>
+
+    @foreach (var m in Model.Machines)
+    {
+        <div style="padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <h5 style="margin:0;">Configurazione @m.MachineNo.ToString("D2")</h5>
+                <span class="text-muted">@(m.Enabled ? "Abilitata" : "Disabilitata")</span>
+            </div>
+
+            @if (!m.Rows.Any())
+            {
+                <p class="text-muted" style="margin-top:10px;">Nessun parametro PER_MACHINE per questo plugin.</p>
+            }
+            else
+            {
+                <table class="table table-sm table-striped" style="margin-top:10px;">
+                    <thead>
+                        <tr>
+                            <th>KEYCF</th>
+                            <th>Descrizione</th>
+                            <th>CFUSR</th>
+                            <th>CFVAL</th>
+                            <th>Export</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in m.Rows)
+                        {
+                            <tr>
+                                <td><code>@r.KeyCf</code></td>
+                                <td>@r.Description</td>
+                                <td style="width:140px;">
+                                    <input class="form-control form-control-sm" name="Items[@i].Cfusr" value="@r.Cfusr" />
+                                </td>
+                                <td>
+                                    <input class="form-control form-control-sm" name="Items[@i].Cfval" value="@r.Cfval" />
+                                </td>
+                                <td style="width:90px; text-align:center;">
+                                    <input type="checkbox" name="Items[@i].ExportEnabled" value="true" @(r.ExportEnabled ? "checked" : "") />
+                                    <input type="hidden" name="Items[@i].ExportEnabled" value="false" />
+                                </td>
+
+                                <input type="hidden" name="Items[@i].ValueId" value="@r.ValueId" />
+                            </tr>
+                            i++;
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+
+    <button class="btn btn-primary" type="submit">Salva Modifiche</button>
+</form>

@@ -1,0 +1,48 @@
+﻿@model List<MachineLinkConfig.Models.Plugin>
+
+@{
+    ViewData["Title"] = "Plugins";
+}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <h2 style="margin:0;">Plugins</h2>
+    <a class="btn btn-primary" href="/plugins/create">+ Crea Plugin</a>
+</div>
+
+<hr />
+
+@if (!Model.Any())
+{
+    <p>Nessun plugin ancora presente.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Display</th>
+                <th>Name</th>
+                <th>SURVEYS</th>
+                <th>MACHINEREADER</th>
+                <th>Dispatcher</th>
+                <th>Dispatcher Code</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>
+                        <a href="/plugins/@p.Id">@p.DisplayName</a>
+                    </td>
+
+                    <td><code>@p.Name</code></td>
+                    <td>@(p.SupportsSurveys ? "SI" : "NO")</td>
+                    <td>@(p.SupportsMachineReader ? "SI" : "NO")</td>
+                    <td>@(p.ManagesDispatcher ? "SI" : "NO")</td>
+                    <td>@(p.DispatcherCode ?? "-")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

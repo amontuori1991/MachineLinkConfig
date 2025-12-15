@@ -1,0 +1,54 @@
+﻿@model MachineLinkConfig.Controllers.ScenarioEditorVm
+
+@{
+    ViewData["Title"] = "Scenario";
+}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+        <h2 style="margin:0;">Scenario: @Model.ScenarioName</h2>
+        <div class="text-muted">Plugin: <code>@Model.PluginName</code></div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn btn-secondary" href="/plugins/@Model.PluginId/scenarios">← Scenari</a>
+        <a class="btn btn-outline-dark" href="/plugins/@Model.PluginId/export">Export</a>
+    </div>
+</div>
+
+<hr />
+
+@if (!Model.Flags.Any())
+{
+    <p class="text-muted">
+        Nessun flag da mostrare. (Compariranno quando esistono regole: il campo IF delle regole diventa un flag.)
+    </p>
+}
+else
+{
+    <form method="post" action="/plugins/@Model.PluginId/scenarios/@Model.ScenarioId/save">
+        @Html.AntiForgeryToken()
+
+        <div style="display:flex; gap:18px; flex-wrap:wrap;">
+            @for (int i = 0; i < Model.Flags.Count; i++)
+            {
+                <div style="border:1px solid #ddd; border-radius:10px; padding:12px; min-width:240px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div><b>@Model.Flags[i].FlagCode</b></div>
+                            <div class="text-muted" style="font-size:12px;">Flag scenario</div>
+                        </div>
+                        <div>
+                            <input type="checkbox" name="Flags[@i].Enabled" value="true" @(Model.Flags[i].Enabled ? "checked" : "") />
+                            <input type="hidden" name="Flags[@i].Enabled" value="false" />
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="Flags[@i].FlagCode" value="@Model.Flags[i].FlagCode" />
+                    <input type="hidden" name="Flags[@i].FlagId" value="@Model.Flags[i].FlagId" />
+                </div>
+            }
+        </div>
+
+        <button class="btn btn-primary" type="submit" style="margin-top:14px;">Salva Flag</button>
+    </form>
+}

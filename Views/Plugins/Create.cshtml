@@ -1,0 +1,66 @@
+﻿@model MachineLinkConfig.Controllers.CreatePluginVm
+
+@{
+    ViewData["Title"] = "Crea Plugin";
+}
+
+<h2>Crea Plugin</h2>
+<hr />
+
+<form method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label class="form-label">Name (radice plugin, es: TRUBENDRCI)</label>
+        <input class="form-control" name="Name" value="@Model.Name" placeholder="TRUBENDRCI" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Display Name (nome leggibile)</label>
+        <input class="form-control" name="DisplayName" value="@Model.DisplayName" placeholder="Trubend RCI" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Servizi supportati</label>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="SupportsSurveys" value="true" @(Model.SupportsSurveys ? "checked" : "") />
+            <label class="form-check-label">SURVEYS_SERVICE</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="SupportsMachineReader" value="true" @(Model.SupportsMachineReader ? "checked" : "") />
+            <label class="form-check-label">MACHINEREADER_SERVICE</label>
+        </div>
+        <small class="text-muted">Seleziona almeno uno.</small>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">In macchina (Dispatcher)</label>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="ManagesDispatcher" name="ManagesDispatcher" value="true" @(Model.ManagesDispatcher ? "checked" : "") />
+            <label class="form-check-label" for="ManagesDispatcher">Gestisce invio in macchina?</label>
+        </div>
+    </div>
+
+    <div class="mb-3" id="dispatcherBlock" style="display:@(Model.ManagesDispatcher ? "block" : "none");">
+        <label class="form-label">Dispatcher Code (es: CSB)</label>
+        <input class="form-control" name="DispatcherCode" value="@Model.DispatcherCode" placeholder="CSB" />
+        <small class="text-muted">Obbligatorio se Dispatcher attivo.</small>
+    </div>
+
+    <div class="text-danger">
+        @Html.ValidationSummary()
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" type="submit">Salva</button>
+        <a class="btn btn-secondary" href="/plugins">Annulla</a>
+    </div>
+</form>
+
+<script>
+    const cb = document.getElementById('ManagesDispatcher');
+    const block = document.getElementById('dispatcherBlock');
+    cb.addEventListener('change', () => {
+        block.style.display = cb.checked ? 'block' : 'none';
+    });
+</script>

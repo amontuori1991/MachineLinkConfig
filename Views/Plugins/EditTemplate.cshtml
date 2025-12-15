@@ -1,0 +1,119 @@
+﻿@model MachineLinkConfig.Controllers.EditTemplateVm
+
+@{
+    ViewData["Title"] = "Modifica parametro";
+}
+
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+        <h2 style="margin:0;">Modifica parametro</h2>
+        <div class="text-muted">Plugin: <code>@Model.PluginName</code></div>
+    </div>
+    <a class="btn btn-secondary" href="/plugins/@Model.PluginId/templates">← Parametri</a>
+</div>
+
+<hr />
+
+<form method="post" action="/plugins/@Model.PluginId/templates/@Model.TemplateId/edit" style="max-width:1000px;">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-2">
+        <div class="col-md-3">
+            <label class="form-label">ServiceRoot</label>
+            <select class="form-select" name="ServiceRoot">
+                @if (Model.SupportsSurveys)
+                {
+                    if (Model.ServiceRoot == "SURVEYS_SERVICE")
+                    {
+                        <option value="SURVEYS_SERVICE" selected>SURVEYS_SERVICE</option>
+                    }
+                    else
+                    {
+                        <option value="SURVEYS_SERVICE">SURVEYS_SERVICE</option>
+                    }
+                }
+                @if (Model.SupportsMachineReader)
+                {
+                    if (Model.ServiceRoot == "MACHINEREADER_SERVICE")
+                    {
+                        <option value="MACHINEREADER_SERVICE" selected>MACHINEREADER_SERVICE</option>
+                    }
+                    else
+                    {
+                        <option value="MACHINEREADER_SERVICE">MACHINEREADER_SERVICE</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Scope</label>
+            <select class="form-select" name="Scope">
+                @if (Model.Scope == "PER_MACHINE")
+                {
+                    <option value="PER_MACHINE" selected>PER_MACHINE</option>
+                }
+                else
+                {
+                    <option value="PER_MACHINE">PER_MACHINE</option>
+                }
+                @if (Model.Scope == "PLUGIN_GLOBAL")
+                {
+                    <option value="PLUGIN_GLOBAL" selected>PLUGIN_GLOBAL</option>
+                }
+                else
+                {
+                    <option value="PLUGIN_GLOBAL">PLUGIN_GLOBAL</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">ParamCode</label>
+            <input class="form-control" name="ParamCode" value="@Model.ParamCode" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">KeySuffix</label>
+            <input class="form-control" name="KeySuffix" value="@Model.KeySuffix" />
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Descrizione</label>
+            <input class="form-control" name="Description" value="@Model.Description" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Default CFUSR</label>
+            <input class="form-control" name="DefaultCfusr" value="@(Model.DefaultCfusr ?? "")" />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Default CFVAL</label>
+            <input class="form-control" name="DefaultCfval" value="@(Model.DefaultCfval ?? "")" />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">SortOrder</label>
+            <input class="form-control" type="number" name="SortOrder" value="@Model.SortOrder" />
+        </div>
+
+        <div class="col-md-2" style="display:flex; align-items:end;">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="ExportEnabledDefault" value="true" @(Model.ExportEnabledDefault ? "checked" : "") />
+                <input type="hidden" name="ExportEnabledDefault" value="false" />
+                <label class="form-check-label">Export default</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-danger" style="margin-top:10px;">
+        @Html.ValidationSummary()
+    </div>
+
+    <button class="btn btn-primary" type="submit" style="margin-top:10px;">Salva</button>
+</form>
+
+<div class="text-muted" style="margin-top:12px;">
+    Nota: modificare i default non aggiorna automaticamente i valori già esistenti nelle macchine (per ora).
+</div>
