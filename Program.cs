@@ -7,12 +7,16 @@ namespace MachineLinkConfig
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-            var cs = builder.Configuration.GetConnectionString("Neon");
-            builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(cs));
 
+            var cs = builder.Configuration.GetConnectionString("Default");
+            if (string.IsNullOrWhiteSpace(cs))
+                throw new InvalidOperationException("Connection string 'Default' not found.");
+
+            builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(cs));
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+
 
             var app = builder.Build();
 
