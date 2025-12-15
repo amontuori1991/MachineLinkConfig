@@ -1,6 +1,8 @@
 using MachineLinkConfig.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 namespace MachineLinkConfig
+
 {
     public class Program
     {
@@ -19,6 +21,10 @@ namespace MachineLinkConfig
 
 
             var app = builder.Build();
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
@@ -38,6 +44,18 @@ namespace MachineLinkConfig
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
+            app.MapGet("/health", async (AppDbContext db) =>
+            {
+                try
+                {
+                    var canConnect = await db.Database.CanConnectAsync();
+                    return Results.Ok(new { ok = true, db = canConnect });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Problem(ex.Message);
+                }
+            });
 
             app.Run();
         }
