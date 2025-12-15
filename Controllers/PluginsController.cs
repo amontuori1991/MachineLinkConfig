@@ -221,9 +221,17 @@ public class PluginsController : Controller
             .Where(pl =>
             {
                 var pk = TryParseKey(pl.KeyCf);
-                return pk != null && pk.PluginName.ToUpperInvariant() == pluginName;
+                return pk != null && string.Equals(pk.PluginName, pluginName, StringComparison.OrdinalIgnoreCase);
+
             })
             .ToList();
+        var dispatcherLines = parsedLines
+    .Where(pl =>
+    {
+        var pk = TryParseKey(pl.KeyCf);
+        return pk != null && pk.Kind == ParsedKeyKind.Dispatcher;
+    })
+    .ToList();
 
         foreach (var pl in pluginLines)
         {
@@ -323,11 +331,15 @@ public class PluginsController : Controller
 
             var dispTemplatesDb = await _db.DispatcherParameterTemplates.Where(t => t.PluginId == plugin.Id).ToListAsync();
 
-            foreach (var pl in pluginLines)
+            foreach (var pl in dispatcherLines)
+
             {
                 var pk = TryParseKey(pl.KeyCf);
                 if (pk == null) continue;
                 if (pk.Kind != ParsedKeyKind.Dispatcher) continue;
+                if (!string.Equals(pk.DispatcherCode, plugin.DispatcherCode, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
 
                 var machineCode = (pk.MachineCode ?? "").Trim();
                 if (!machineIdByCode.TryGetValue(machineCode, out var machineId))
