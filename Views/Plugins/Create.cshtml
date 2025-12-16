@@ -30,6 +30,11 @@
             <input class="form-check-input" type="checkbox" name="SupportsMachineReader" value="true" @(Model.SupportsMachineReader ? "checked" : "") />
             <label class="form-check-label">MACHINEREADER_SERVICE</label>
         </div>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" asp-for="SupportsAutoStoreReader" />
+            <label class="form-check-label" asp-for="SupportsAutoStoreReader">Supports AUTOSTOREREADER</label>
+        </div>
+
         <small class="text-muted">Seleziona almeno uno.</small>
     </div>
 

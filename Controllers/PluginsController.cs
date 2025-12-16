@@ -146,7 +146,9 @@ public class PluginsController : Controller
         // Deduzioni: servizi supportati, dispatcher
         bool hasSurveys = parsedKeys.Any(x => x.ServiceRoot == "SURVEYS_SERVICE");
         bool hasMachineReader = parsedKeys.Any(x => x.ServiceRoot == "MACHINEREADER_SERVICE");
+        bool hasAutoStoreReader = parsedKeys.Any(x => x.ServiceRoot == "AUTOSTOREREADER");
         bool hasDispatcher = parsedKeys.Any(x => x.Kind == ParsedKeyKind.Dispatcher);
+
 
         // dispatcherCode (se c’è almeno una riga dispatcher)
         var dispatcherCode = parsedKeys.FirstOrDefault(x => x.Kind == ParsedKeyKind.Dispatcher)?.DispatcherCode;
@@ -161,6 +163,7 @@ public class PluginsController : Controller
                 DisplayName = pluginName,
                 SupportsSurveys = hasSurveys,
                 SupportsMachineReader = hasMachineReader,
+                SupportsAutoStoreReader = hasAutoStoreReader,
                 ManagesDispatcher = hasDispatcher,
                 DispatcherCode = hasDispatcher ? dispatcherCode?.ToUpperInvariant() : null
             };
@@ -173,6 +176,7 @@ public class PluginsController : Controller
             bool changed = false;
             if (hasSurveys && !plugin.SupportsSurveys) { plugin.SupportsSurveys = true; changed = true; }
             if (hasMachineReader && !plugin.SupportsMachineReader) { plugin.SupportsMachineReader = true; changed = true; }
+            if (hasAutoStoreReader && !plugin.SupportsAutoStoreReader) { plugin.SupportsAutoStoreReader = true; changed = true; }
             if (hasDispatcher && !plugin.ManagesDispatcher) { plugin.ManagesDispatcher = true; changed = true; }
 
             if (hasDispatcher && !string.IsNullOrWhiteSpace(dispatcherCode) && string.IsNullOrWhiteSpace(plugin.DispatcherCode))
@@ -241,7 +245,11 @@ public class PluginsController : Controller
             if (pk.Kind == ParsedKeyKind.PluginParam)
             {
                 var scope = pk.IsPluginActivation ? "PLUGIN_GLOBAL" : (pk.MachineNo.HasValue ? "PER_MACHINE" : "PLUGIN_GLOBAL");
-                var keySuffix = pk.IsPluginActivation ? "PLUGIN" : pk.KeySuffix!.ToUpperInvariant();
+                var keySuffix =
+    pk.IsPluginActivation
+        ? (pk.ServiceRoot == "AUTOSTOREREADER" ? "WAREHOUSE" : "PLUGIN")
+        : pk.KeySuffix!.ToUpperInvariant();
+
                 var serviceRoot = pk.ServiceRoot;
 
                 // template upsert
@@ -482,11 +490,29 @@ public class PluginsController : Controller
                 KeySuffix = "PLUGIN"
             };
         }
+        // AUTOSTOREREADER activation: AUTOSTOREREADER_WAREHOUSE_<PLUGIN>
+        var mAutoAct = System.Text.RegularExpressions.Regex.Match(
+            keycf,
+            @"^(AUTOSTOREREADER)_WAREHOUSE_([A-Z0-9]+)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (mAutoAct.Success)
+        {
+            return new ParsedKey
+            {
+                Kind = ParsedKeyKind.PluginParam,
+                ServiceRoot = "AUTOSTOREREADER",
+                PluginName = mAutoAct.Groups[2].Value.ToUpperInvariant(),
+                IsPluginActivation = true,
+                MachineNo = null,
+                KeySuffix = "WAREHOUSE"
+            };
+        }
 
         // Standard per macchina: <ROOT>_<PLUGIN>_01_<SUFFIX>
         var mStd = System.Text.RegularExpressions.Regex.Match(
             keycf,
-            @"^(SURVEYS_SERVICE|MACHINEREADER_SERVICE)_([A-Z0-9]+)_([0-9]{2})_([A-Z0-9_]+)$",
+            @"^(SURVEYS_SERVICE|MACHINEREADER_SERVICE|AUTOSTOREREADER)_([A-Z0-9]+)_([0-9]{2})_([A-Z0-9_]+)$",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         if (mStd.Success)
@@ -538,7 +564,12 @@ public class PluginsController : Controller
             PluginId = id,
             SupportsSurveys = plugin.SupportsSurveys,
             SupportsMachineReader = plugin.SupportsMachineReader,
-            ServiceRoot = plugin.SupportsSurveys ? "SURVEYS_SERVICE" : "MACHINEREADER_SERVICE",
+            SupportsAutoStoreReader = plugin.SupportsAutoStoreReader,
+            ServiceRoot =
+    plugin.SupportsSurveys ? "SURVEYS_SERVICE" :
+    plugin.SupportsMachineReader ? "MACHINEREADER_SERVICE" :
+    "AUTOSTOREREADER",
+
             Scope = "PER_MACHINE",
             ExportEnabledDefault = true,
             SortOrder = 0
@@ -863,11 +894,24 @@ public class PluginsController : Controller
 
     private static string BuildKeyCf(Plugin plugin, PluginParameterTemplate tpl, PluginMachineConfig? machine)
     {
-        // PER_MACHINE -> include _01 / _02 ...
-        // PLUGIN_GLOBAL -> no _01
+        var sr = (tpl.ServiceRoot ?? "").Trim().ToUpperInvariant();
+        var ks = (tpl.KeySuffix ?? "").Trim().ToUpperInvariant();
+
+        // ✅ ATTIVAZIONE SURVEYS / MACHINEREADER: <SR>_PLUGIN_<PLUGIN>
+        // (noi riconosciamo l'attivazione dal KeySuffix = PLUGIN)
+        if (ks == "PLUGIN" && (sr == "SURVEYS_SERVICE" || sr == "MACHINEREADER_SERVICE"))
+            return $"{sr}_PLUGIN_{plugin.Name}";
+
+        // ✅ ATTIVAZIONE AUTOSTOREREADER: AUTOSTOREREADER_WAREHOUSE_<PLUGIN>
+        // (noi riconosciamo l'attivazione dal KeySuffix = WAREHOUSE)
+        if (ks == "WAREHOUSE" && sr == "AUTOSTOREREADER")
+            return $"{sr}_WAREHOUSE_{plugin.Name}";
+
+        // Standard: <SR>_<PLUGIN>[_NN]_<SUFFIX>
         var machinePart = machine == null ? "" : $"_{machine.MachineNo:D2}";
-        return $"{tpl.ServiceRoot}_{plugin.Name}{machinePart}_{tpl.KeySuffix}";
+        return $"{sr}_{plugin.Name}{machinePart}_{ks}";
     }
+
     // GET /plugins/{id}/dispatcher
     [HttpGet("{id:long}/dispatcher")]
     public async Task<IActionResult> Dispatcher(long id)
@@ -1115,7 +1159,8 @@ public class PluginsController : Controller
 
         // key base: <SERVICE_ROOT>_<PLUGIN>_(NN_)<KEY_SUFFIX>
         // es: SURVEYS_SERVICE_TRUBENDRCI_01_MAC
-        keycf = $"{tpl.ServiceRoot}_{plugin.Name}{machinePart}_{tpl.KeySuffix}";
+        keycf = BuildKeyCf(plugin, tpl, machine);
+
 
         // Nota: i parametri globali che NON devono avere _01_ escono con machinePart vuoto.
 
@@ -1156,6 +1201,8 @@ public class PluginsController : Controller
             ModelState.AddModelError(nameof(vm.ServiceRoot), "Questo plugin non supporta SURVEYS_SERVICE.");
         if (vm.ServiceRoot == "MACHINEREADER_SERVICE" && !plugin.SupportsMachineReader)
             ModelState.AddModelError(nameof(vm.ServiceRoot), "Questo plugin non supporta MACHINEREADER_SERVICE.");
+        if (vm.ServiceRoot == "AUTOSTOREREADER" && !plugin.SupportsAutoStoreReader)
+            ModelState.AddModelError(nameof(vm.ServiceRoot), "Questo plugin non supporta AUTOSTOREREADER.");
         if (vm.Scope != "PLUGIN_GLOBAL" && vm.Scope != "PER_MACHINE")
             ModelState.AddModelError(nameof(vm.Scope), "Scope non valido.");
 
@@ -1280,6 +1327,7 @@ public class PluginsController : Controller
             SortOrder = t.SortOrder,
 
             SupportsSurveys = plugin.SupportsSurveys,
+            SupportsAutoStoreReader = plugin.SupportsAutoStoreReader,
             SupportsMachineReader = plugin.SupportsMachineReader
         });
     }
@@ -1342,6 +1390,8 @@ public class PluginsController : Controller
             ModelState.AddModelError(nameof(vm.ServiceRoot), "Questo plugin non supporta SURVEYS_SERVICE.");
         if (vm.ServiceRoot == "MACHINEREADER_SERVICE" && !plugin.SupportsMachineReader)
             ModelState.AddModelError(nameof(vm.ServiceRoot), "Questo plugin non supporta MACHINEREADER_SERVICE.");
+        if (vm.ServiceRoot == "AUTOSTOREREADER" && !plugin.SupportsAutoStoreReader)
+            ModelState.AddModelError(nameof(vm.ServiceRoot), "Questo plugin non supporta AUTOSTOREREADER.");
 
         // controllo duplicati (stessa chiave: serviceRoot + scope + keySuffix)
         var duplicate = await _db.PluginParameterTemplates.AnyAsync(x =>
@@ -1913,9 +1963,9 @@ public class PluginsController : Controller
         vm.DisplayName = vm.DisplayName.Trim();
         vm.DispatcherCode = string.IsNullOrWhiteSpace(vm.DispatcherCode) ? null : vm.DispatcherCode.Trim();
 
-        if (!vm.SupportsSurveys && !vm.SupportsMachineReader)
+        if (!vm.SupportsSurveys && !vm.SupportsMachineReader && !vm.SupportsAutoStoreReader)
         {
-            ModelState.AddModelError("", "Devi selezionare almeno un servizio (SURVEYS o MACHINEREADER).");
+            ModelState.AddModelError("", "Devi selezionare almeno un servizio (SURVEYS, MACHINEREADER o AUTOSTOREREADER).");
             return View(vm);
         }
 
@@ -1941,6 +1991,7 @@ public class PluginsController : Controller
             DisplayName = vm.DisplayName,
             SupportsSurveys = vm.SupportsSurveys,
             SupportsMachineReader = vm.SupportsMachineReader,
+            SupportsAutoStoreReader = vm.SupportsAutoStoreReader,
             ManagesDispatcher = vm.ManagesDispatcher,
             DispatcherCode = vm.ManagesDispatcher ? vm.DispatcherCode!.ToUpperInvariant() : null
         };
@@ -1959,6 +2010,8 @@ public class CreatePluginVm
 
     public bool SupportsSurveys { get; set; } = true;
     public bool SupportsMachineReader { get; set; } = false;
+
+    public bool SupportsAutoStoreReader { get; set; } = false;
 
     public bool ManagesDispatcher { get; set; } = false;
     public string? DispatcherCode { get; set; }    // CSB
@@ -1981,6 +2034,7 @@ public class CreateTemplateVm
     // per UI: quali root mostrare
     public bool SupportsSurveys { get; set; }
     public bool SupportsMachineReader { get; set; }
+    public bool SupportsAutoStoreReader { get; set; }
 
     public string ServiceRoot { get; set; } = "SURVEYS_SERVICE";
     public string Scope { get; set; } = "PER_MACHINE"; // PLUGIN_GLOBAL | PER_MACHINE
@@ -2189,6 +2243,7 @@ public class EditTemplateVm
 
     public bool SupportsSurveys { get; set; }
     public bool SupportsMachineReader { get; set; }
+    public bool SupportsAutoStoreReader { get; set; }
 
     public string ServiceRoot { get; set; } = "SURVEYS_SERVICE";
     public string Scope { get; set; } = "PER_MACHINE";

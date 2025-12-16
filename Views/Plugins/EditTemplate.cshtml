@@ -43,6 +43,19 @@
                         <option value="MACHINEREADER_SERVICE">MACHINEREADER_SERVICE</option>
                     }
                 }
+
+                @if (Model.SupportsAutoStoreReader)
+                {
+                    if (Model.ServiceRoot == "AUTOSTOREREADER")
+                    {
+                        <option value="AUTOSTOREREADER" selected>AUTOSTOREREADER</option>
+                    }
+                    else
+                    {
+                        <option value="AUTOSTOREREADER">AUTOSTOREREADER</option>
+                    }
+                }
+
             </select>
         </div>
 

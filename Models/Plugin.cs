@@ -24,6 +24,9 @@ public class Plugin
     [Column("supports_machinereader")]
     public bool SupportsMachineReader { get; set; } = false;
 
+    [Column("supports_autostorereader")]
+    public bool SupportsAutoStoreReader { get; set; } = false;
+
     [Column("manages_dispatcher")]
     public bool ManagesDispatcher { get; set; } = false;
 
@@ -32,4 +35,5 @@ public class Plugin
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
 }
