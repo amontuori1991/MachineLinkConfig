@@ -24,10 +24,9 @@ else
         <thead>
             <tr>
                 <th>Display</th>
-                <th>Name</th>
                 <th class="text-center">SURVEYS</th>
                 <th class="text-center">MACHINEREADER</th>
-                <th class="text-center">AUTOSTORE</th>
+                <th class="text-center">AUTOSTOREREADER</th>
                 <th class="text-center">Dispatcher</th>
                 <th class="text-center">Dispatcher Code</th>
             </tr>
@@ -40,14 +39,6 @@ else
                            placeholder="Cerca..."
                            data-filter="text"
                            data-col="display" />
-                </th>
-
-                <th>
-                    <input class="form-control form-control-sm"
-                           type="text"
-                           placeholder="Cerca..."
-                           data-filter="text"
-                           data-col="name" />
                 </th>
 
                 <th class="text-center">
@@ -106,7 +97,6 @@ else
                 var dispCode = string.IsNullOrWhiteSpace(p.DispatcherCode) ? "-" : p.DispatcherCode;
 
                 <tr data-display="@p.DisplayName"
-                    data-name="@p.Name"
                     data-surveys="@(p.SupportsSurveys ? "SI" : "NO")"
                     data-machinereader="@(p.SupportsMachineReader ? "SI" : "NO")"
                     data-autostore="@(p.SupportsAutoStoreReader ? "SI" : "NO")"
@@ -115,8 +105,6 @@ else
                     <td>
                         <a href="/plugins/@p.Id">@p.DisplayName</a>
                     </td>
-
-                    <td><code>@p.Name</code></td>
 
                     <td class="text-center @(p.SupportsSurveys ? "text-success fw-bold" : "text-danger")">
                         @(p.SupportsSurveys ? "SI" : "NO")
