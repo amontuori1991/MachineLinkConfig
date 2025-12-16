@@ -1,0 +1,379 @@
+﻿/* wwwroot/css/azerouno-theme.css */
+
+/* =========================
+   Azerouno Theme (4.0)
+   ========================= */
+
+/* 1) Variabili tema (brand) */
+:root {
+    --az-purple: #6C2BD9;
+    --az-purple-2: #8A4DFF;
+    --az-blue: #0B3DFF;
+    --az-blue-2: #1E90FF;
+    --az-bg: #0B1020; /* sfondo scuro elegante */
+    --az-surface: rgba(255,255,255,0.06);
+    --az-surface-2: rgba(255,255,255,0.10);
+    --az-border: rgba(255,255,255,0.12);
+    --az-text: rgba(255,255,255,0.92);
+    --az-muted: rgba(255,255,255,0.65);
+    --az-success: #1DB954;
+    --az-danger: #FF4D4D;
+    --az-warning: #FFC107;
+    --az-radius: 14px;
+    --az-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+/* 2) Base */
+html, body {
+    height: 100%;
+}
+
+body {
+    background: radial-gradient(1200px 600px at 15% 10%, rgba(108,43,217,0.35), transparent 60%), radial-gradient(900px 500px at 85% 20%, rgba(30,144,255,0.25), transparent 55%), radial-gradient(700px 450px at 50% 90%, rgba(138,77,255,0.18), transparent 55%), var(--az-bg);
+    color: var(--az-text);
+}
+
+/* Tipografia */
+h1, h2, h3, h4, h5 {
+    letter-spacing: .2px;
+}
+
+.text-muted {
+    color: var(--az-muted) !important;
+}
+
+/* Link */
+a {
+    color: rgba(255,255,255,0.92);
+    text-decoration: none;
+}
+
+    a:hover {
+        color: white;
+        text-decoration: underline;
+    }
+
+/* 3) Layout helpers */
+.az-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 18px;
+}
+
+/* 4) Navbar / Header */
+.az-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(11,16,32,0.60);
+    border-bottom: 1px solid var(--az-border);
+}
+
+.az-topbar-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+}
+
+.az-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.az-brand-logo {
+    height: 34px;
+    width: auto;
+}
+
+.az-brand-title {
+    font-weight: 700;
+    letter-spacing: .4px;
+}
+
+.az-chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(108,43,217,0.25), rgba(30,144,255,0.20));
+    border: 1px solid var(--az-border);
+    color: var(--az-text);
+}
+
+/* 5) Card */
+.az-card {
+    background: linear-gradient(180deg, var(--az-surface), rgba(255,255,255,0.03));
+    border: 1px solid var(--az-border);
+    border-radius: var(--az-radius);
+    box-shadow: var(--az-shadow);
+}
+
+.az-card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--az-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.az-card-body {
+    padding: 16px;
+}
+
+/* 6) Tabelle */
+.table {
+    color: var(--az-text);
+}
+
+    .table thead th {
+        color: rgba(255,255,255,0.85);
+        border-color: var(--az-border) !important;
+    }
+
+    .table td, .table th {
+        border-color: var(--az-border) !important;
+    }
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    color: var(--az-text);
+    background: rgba(255,255,255,0.03);
+}
+
+/* 7) Bottoni (override Bootstrap) */
+.btn {
+    border-radius: 12px;
+}
+
+.btn-primary {
+    border: 0;
+    background: linear-gradient(90deg, var(--az-purple), var(--az-blue));
+    box-shadow: 0 8px 20px rgba(108,43,217,0.25);
+}
+
+    .btn-primary:hover {
+        filter: brightness(1.05);
+    }
+
+.btn-dark {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid var(--az-border);
+}
+
+    .btn-dark:hover {
+        background: rgba(255,255,255,0.14);
+    }
+
+/* 8) Badge SI/NO */
+.az-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid var(--az-border);
+}
+
+.az-yes {
+    background: rgba(29,185,84,0.18);
+    color: rgba(240,255,245,0.95);
+    border-color: rgba(29,185,84,0.35);
+}
+
+.az-no {
+    background: rgba(255,77,77,0.14);
+    color: rgba(255,235,235,0.95);
+    border-color: rgba(255,77,77,0.35);
+}
+
+/* 9) Inputs */
+.form-control, .form-select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--az-border);
+    color: var(--az-text);
+    border-radius: 12px;
+}
+
+    .form-control:focus, .form-select:focus {
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(138,77,255,0.65);
+        box-shadow: 0 0 0 .2rem rgba(108,43,217,0.18);
+        color: var(--az-text);
+    }
+
+.form-label {
+    color: rgba(255,255,255,0.85);
+}
+/* =========================
+   TABLE: leggibile + elegante
+   ========================= */
+.table {
+    color: var(--az-text) !important;
+}
+
+    .table thead th {
+        background: rgba(255,255,255,0.07) !important;
+        color: rgba(255,255,255,0.95) !important;
+        border-color: var(--az-border) !important;
+    }
+
+    .table td, .table th {
+        border-color: rgba(255,255,255,0.10) !important;
+    }
+
+    .table.table-striped > tbody > tr:nth-of-type(odd) > * {
+        background: rgba(255,255,255,0.035) !important;
+    }
+
+    .table.table-striped > tbody > tr:nth-of-type(even) > * {
+        background: rgba(0,0,0,0.10) !important;
+    }
+
+    .table tbody tr:hover > * {
+        background: rgba(108,43,217,0.16) !important;
+    }
+
+    /* Link dentro tabelle */
+    .table a {
+        color: rgba(255,255,255,0.95) !important;
+    }
+
+        .table a:hover {
+            color: #fff !important;
+        }
+
+/* =========================
+   BUTTONS: non toccare .btn globale!
+   Fix per outline nel tema scuro
+   ========================= */
+.btn-outline-primary,
+.btn-outline-success,
+.btn-outline-dark,
+.btn-outline-danger,
+.btn-outline-info {
+    background: rgba(255,255,255,0.08) !important;
+    color: rgba(255,255,255,0.92) !important;
+    border-color: rgba(255,255,255,0.18) !important;
+}
+
+    .btn-outline-primary:hover,
+    .btn-outline-success:hover,
+    .btn-outline-dark:hover,
+    .btn-outline-danger:hover,
+    .btn-outline-info:hover {
+        background: rgba(108,43,217,0.24) !important;
+        border-color: rgba(108,43,217,0.55) !important;
+        color: #fff !important;
+    }
+
+/* Tabs “pills” nel dettaglio plugin */
+.plugin-tabs .btn {
+    background: rgba(255,255,255,0.10) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    border-radius: 999px;
+    padding: 6px 14px;
+}
+
+    .plugin-tabs .btn:hover {
+        background: rgba(108,43,217,0.22) !important;
+    }
+
+/* =========================
+   FOOTER: mai sovrapposto
+   ========================= */
+html, body {
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+footer {
+    margin-top: auto;
+    position: static !important;
+}
+/* =========================
+   HOTFIX leggibilità + overflow + bottoni outline
+   Incolla in fondo al file
+   ========================= */
+
+/* Evita che la pagina diventi più larga dello schermo */
+html, body {
+    width: 100%;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+/* Wrapper contenuti: più chiaro e leggibile */
+.content-wrapper {
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+}
+
+/* Fix fucsia dei <code> (Bootstrap lo colora) */
+code {
+    color: rgba(255,255,255,0.88) !important;
+}
+
+/* Tabelle: fondo più chiaro, righe leggibili */
+.table {
+    background: rgba(255,255,255,0.06) !important;
+    color: rgba(255,255,255,0.94) !important;
+}
+
+    .table thead th {
+        background: rgba(255,255,255,0.12) !important;
+        color: rgba(255,255,255,0.96) !important;
+        border-color: rgba(255,255,255,0.16) !important;
+    }
+
+    .table td, .table th {
+        border-color: rgba(255,255,255,0.10) !important;
+    }
+
+    .table.table-striped > tbody > tr:nth-of-type(odd) > * {
+        background: rgba(255,255,255,0.07) !important;
+    }
+
+    .table.table-striped > tbody > tr:nth-of-type(even) > * {
+        background: rgba(0,0,0,0.08) !important;
+    }
+
+    .table tbody tr:hover > * {
+        background: rgba(108,43,217,0.18) !important;
+    }
+
+/* Bottoni outline: NON trasparenti (su sfondo scuro) */
+.btn-outline-primary,
+.btn-outline-success,
+.btn-outline-dark,
+.btn-outline-danger,
+.btn-outline-info {
+    background: rgba(255,255,255,0.10) !important;
+    color: rgba(255,255,255,0.94) !important;
+    border-color: rgba(255,255,255,0.22) !important;
+}
+
+    .btn-outline-primary:hover,
+    .btn-outline-success:hover,
+    .btn-outline-dark:hover,
+    .btn-outline-danger:hover,
+    .btn-outline-info:hover {
+        background: rgba(108,43,217,0.28) !important;
+        border-color: rgba(108,43,217,0.55) !important;
+        color: #fff !important;
+    }

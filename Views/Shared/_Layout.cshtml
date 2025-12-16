@@ -5,10 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - MachineLinkConfig</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/MachineLinkConfig.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/azerouno-theme.css" asp-append-version="true" />
+
 </head>
 <body>
+    <header class="az-topbar">
+        <div class="az-topbar-inner">
+            <div class="az-brand">
+                <img class="az-brand-logo" src="~/img/azerouno-logo.png" alt="Azerouno" />
+                <div>
+                    <div class="az-brand-title">Azerouno</div>
+                    <div class="text-muted" style="font-size:12px;">Integrazioni 4.0 • Config Manager</div>
+                </div>
+                <span class="az-chip">Industry 4.0</span>
+            </div>
+
+            <div style="display:flex; gap:8px;">
+                <a class="btn btn-dark btn-sm" href="/plugins">Plugins</a>
+                <a class="btn btn-primary btn-sm" href="/plugins/import">Import</a>
+            </div>
+        </div>
+    </header>
+
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
@@ -31,9 +49,12 @@
         </nav>
     </header>
     <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
+        <main role="main" class="pb-5">
+            <div class="content-wrapper">
+                @RenderBody()
+            </div>
         </main>
+
     </div>
 
     <footer class="border-top footer text-muted">

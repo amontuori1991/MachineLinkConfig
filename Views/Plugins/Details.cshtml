@@ -24,13 +24,14 @@
 
 <hr />
 
-<div style="display:flex; gap:10px; margin-bottom:10px;">
+<div class="plugin-tabs d-flex flex-wrap gap-2 mb-3">
     <a class="btn btn-outline-primary" href="/plugins/@Model.Plugin.Id/templates">⚙️ Parametri (Template)</a>
     <a class="btn btn-outline-success" href="/plugins/@Model.Plugin.Id/values">🧾 Valori Parametri</a>
     <a class="btn btn-outline-dark" href="/plugins/@Model.Plugin.Id/export">⬇️ Export</a>
     <a class="btn btn-outline-danger" href="/plugins/@Model.Plugin.Id/rules">🧩 Regole</a>
     <a class="btn btn-outline-info" href="/plugins/@Model.Plugin.Id/scenarios">🎛️ Scenari</a>
 </div>
+
 @if (Model.Plugin.ManagesDispatcher)
 {
     <a class="btn btn-outline-warning" href="/plugins/@Model.Plugin.Id/dispatcher">🚚 Dispatcher</a>
