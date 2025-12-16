@@ -377,3 +377,26 @@ code {
         border-color: rgba(108,43,217,0.55) !important;
         color: #fff !important;
     }
+/* =========================
+   FIX dropdown <select> (options invisibili)
+   ========================= */
+
+/* Select chiuso (già ok, ma lo rinforziamo) */
+.form-select {
+    background-color: rgba(255,255,255,0.08) !important;
+    color: rgba(255,255,255,0.92) !important;
+    border-color: rgba(255,255,255,0.18) !important;
+}
+
+    /* Menu a tendina (options) */
+    .form-select option {
+        background-color: #0B1020 !important; /* scuro */
+        color: rgba(255,255,255,0.92) !important; /* testo chiaro */
+    }
+
+        /* (opzionale) quando evidenzi un’opzione */
+        .form-select option:checked,
+        .form-select option:hover {
+            background-color: rgba(108,43,217,0.35) !important;
+            color: #fff !important;
+        }
